@@ -116,6 +116,17 @@ pub fn exotic_perks() {
         ),
     );
 
+    add_rmr(
+        Perks::HuntersTrace,
+        Box::new(|_input: ModifierResponseInput| -> RangeModifierResponse {
+            let range_ads_scale = if _input.value > 0 { 4.5 / 1.7 } else { 1.0 };
+            RangeModifierResponse {
+                range_zoom_scale: range_ads_scale,
+                ..Default::default()
+            }
+        }),
+    );
+
     add_dmr(
         Perks::MementoMori,
         Box::new(|_input: ModifierResponseInput| -> DamageModifierResponse {
@@ -127,6 +138,21 @@ pub fn exotic_perks() {
                 impact_dmg_scale: damage_buff,
                 explosive_dmg_scale: damage_buff,
                 crit_scale: 1.0,
+            }
+        }),
+    );
+
+    add_rmr(
+        Perks::MementoMori,
+        Box::new(|_input: ModifierResponseInput| -> RangeModifierResponse {
+            let range_all_scale = if _input.value > 0 && _input.calc_data.total_shots_fired < 7.0 {
+                0.85
+            } else {
+                1.0
+            };
+            RangeModifierResponse {
+                range_all_scale,
+                ..Default::default()
             }
         }),
     );
@@ -237,7 +263,7 @@ pub fn exotic_perks() {
                 weapon_scale: true,
                 crit_scale: false,
                 combatant_scale: true,
-                ..Default::default()
+                explosive_percent: 0.0,
             }
         }),
     );
@@ -274,7 +300,7 @@ pub fn exotic_perks() {
         Box::new(|_input: ModifierResponseInput| -> DamageModifierResponse {
             let mut damage_buff = 1.0;
             if _input.calc_data.curr_mag == 1.0 {
-                damage_buff = 2.0;
+                damage_buff = if _input.pvp { 2.0 } else { 2.4 };
             };
             DamageModifierResponse {
                 impact_dmg_scale: damage_buff,
@@ -314,7 +340,7 @@ pub fn exotic_perks() {
                 weapon_scale: true,
                 crit_scale: false,
                 combatant_scale: true,
-                ..Default::default()
+                explosive_percent: 0.0 //not sure on this ,
             }
         }),
     );
@@ -773,21 +799,12 @@ pub fn exotic_perks() {
     add_rmr(
         Perks::DualSpeedReceiver,
         Box::new(|_input: ModifierResponseInput| -> RangeModifierResponse {
-            let zoom_stat = _input
-                .calc_data
-                .stats
-                .get(&StatHashes::ZOOM.into())
-                .unwrap_or(&Stat::new())
-                .val() as f64;
-            let zoom_mult = (zoom_stat + 3.0) / zoom_stat;
-            if _input.value > 0 {
-                RangeModifierResponse {
-                    range_stat_add: 30,
-                    range_zoom_scale: zoom_mult,
-                    ..Default::default()
-                }
-            } else {
-                RangeModifierResponse::default()
+            if _input.value == 0 {
+                return RangeModifierResponse::default();
+            }
+            RangeModifierResponse {
+                range_stat_add: 30,
+                ..Default::default()
             }
         }),
     );
@@ -818,12 +835,11 @@ pub fn exotic_perks() {
     add_fmr(
         Perks::RatPack,
         Box::new(|_input: ModifierResponseInput| -> FiringModifierResponse {
-            let val;
-            if _input.value > 0 {
-                val = clamp(_input.value - 1, 0, 4);
-            } else {
-                val = 0;
+            if _input.value == 0 {
+                return FiringModifierResponse::default();
             }
+            let val = clamp(_input.value - 1, 0, 4);
+
             FiringModifierResponse {
                 burst_delay_add: val as f64 * (-0.625 / 30.0),
                 ..Default::default()
@@ -847,7 +863,7 @@ pub fn exotic_perks() {
     add_fmr(
         Perks::RideTheBull,
         Box::new(|_input: ModifierResponseInput| -> FiringModifierResponse {
-            let extra_value = _input.calc_data.shots_fired_this_mag as f64 / 10.0;
+            let extra_value = _input.calc_data.shots_fired_this_mag / 10.0;
             let val = clamp(_input.value + extra_value as u32, 0, 2);
             FiringModifierResponse {
                 burst_delay_add: val as f64 * (-0.25 / 30.0),
@@ -859,7 +875,7 @@ pub fn exotic_perks() {
     add_fmr(
         Perks::SpinningUp,
         Box::new(|_input: ModifierResponseInput| -> FiringModifierResponse {
-            let extra_value = _input.calc_data.shots_fired_this_mag as f64 / 12.0;
+            let extra_value = _input.calc_data.shots_fired_this_mag / 12.0;
             let val = clamp(_input.value + extra_value as u32, 0, 2);
             FiringModifierResponse {
                 burst_delay_add: val as f64 * (-0.5 / 30.0),
@@ -906,25 +922,24 @@ pub fn exotic_perks() {
         Perks::DarkForgedTrigger,
         Box::new(|_input: ModifierResponseInput| -> FiringModifierResponse {
             if _input.value == 0 {
-                if _input
-                    .calc_data
-                    .perk_value_map
-                    .get(&1319823571)
-                    .unwrap_or(&0)
-                    > &4
-                {
-                    FiringModifierResponse {
-                        burst_delay_add: -5.0 / 30.0,
-                        ..Default::default()
-                    }
-                } else {
-                    FiringModifierResponse {
-                        burst_delay_add: -1.0 / 30.0,
-                        ..Default::default()
-                    }
+                return FiringModifierResponse::default();
+            }
+            if _input
+                .calc_data
+                .perk_value_map
+                .get(&1319823571)
+                .unwrap_or(&0)
+                > &4
+            {
+                FiringModifierResponse {
+                    burst_delay_add: -5.0 / 30.0,
+                    ..Default::default()
                 }
             } else {
-                FiringModifierResponse::default()
+                FiringModifierResponse {
+                    burst_delay_add: -1.0 / 30.0,
+                    ..Default::default()
+                }
             }
         }),
     );
@@ -1030,7 +1045,7 @@ pub fn exotic_perks() {
         Box::new(|_input: ModifierResponseInput| -> FiringModifierResponse {
             if _input.value > 0 {
                 return FiringModifierResponse {
-                    burst_delay_add: 0.383,
+                    burst_delay_add: 0.366,
                     ..Default::default()
                 };
             }
@@ -1098,6 +1113,39 @@ pub fn exotic_perks() {
         Box::new(|_input: ModifierResponseInput| -> FiringModifierResponse {
             FiringModifierResponse {
                 burst_delay_add: 0.333, // 300 + 333 = 633 ,
+                ..Default::default()
+            }
+        }),
+    );
+
+    add_dmr(
+        Perks::Broadhead,
+        Box::new(|_input: ModifierResponseInput| -> DamageModifierResponse {
+            let broadhead_damage = if _input.pvp { 30.0 } else { 60.0 };
+            let impact_damage = _input.calc_data.curr_firing_data.damage;
+            let crit_mult = _input.calc_data.curr_firing_data.crit_mult;
+
+            let impact_dmg_scale = (broadhead_damage + impact_damage) / impact_damage;
+
+            let crit_scale = (impact_damage * crit_mult + broadhead_damage)
+                / (impact_damage * impact_dmg_scale * crit_mult);
+
+            DamageModifierResponse {
+                impact_dmg_scale,
+                crit_scale,
+                ..Default::default()
+            }
+        }),
+    );
+    add_fmr(
+        Perks::Desperation,
+        Box::new(|_input: ModifierResponseInput| -> FiringModifierResponse {
+            let duration = 7.0;
+            if _input.value == 0 || _input.calc_data.time_total > duration {
+                return FiringModifierResponse::default();
+            }
+            FiringModifierResponse {
+                burst_delay_scale: 0.8,
                 ..Default::default()
             }
         }),

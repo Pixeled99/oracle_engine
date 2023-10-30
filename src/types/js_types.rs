@@ -1,4 +1,7 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    fmt::{self, write},
+};
 
 use crate::{
     activity::damage_calc::DifficultyOptions,
@@ -158,10 +161,6 @@ pub struct JsDpsResponse {
 }
 #[wasm_bindgen(js_class = "DpsResponse")]
 impl JsDpsResponse {
-    #[wasm_bindgen(js_name = "toString")]
-    pub fn to_string(self) -> String {
-        format!("{:?}", self)
-    }
     #[wasm_bindgen(js_name = "toJSON")]
     pub fn to_json(self) -> String {
         serde_wasm_bindgen::to_value(&self)
@@ -178,6 +177,11 @@ impl JsDpsResponse {
     #[wasm_bindgen(getter, js_name = "dpsPerMag")]
     pub fn dps_per_mag(&self) -> JsValue {
         serde_wasm_bindgen::to_value(&self.dps_per_mag).unwrap()
+    }
+}
+impl fmt::Display for JsDpsResponse {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
     }
 }
 impl From<DpsResponse> for JsDpsResponse {
@@ -310,13 +314,13 @@ pub struct JsStat {
     #[serde(rename = "traitValue")]
     pub trait_value: i32,
 }
-#[wasm_bindgen(js_class = "Stat")]
-impl JsStat {
-    #[wasm_bindgen(js_name = "toString")]
-    pub fn to_string(self) -> String {
-        format!("{:?}", self)
+
+impl fmt::Display for JsStat {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
     }
 }
+
 impl From<Stat> for JsStat {
     fn from(stat: Stat) -> Self {
         JsStat {
@@ -370,9 +374,9 @@ pub enum JsDifficultyOptions {
     RAID = 2,
     MASTER = 3,
 }
-impl Into<DifficultyOptions> for JsDifficultyOptions {
-    fn into(self) -> DifficultyOptions {
-        match self {
+impl From<JsDifficultyOptions> for DifficultyOptions {
+    fn from(val: JsDifficultyOptions) -> Self {
+        match val {
             JsDifficultyOptions::NORMAL => DifficultyOptions::NORMAL,
             JsDifficultyOptions::RAID => DifficultyOptions::RAID,
             JsDifficultyOptions::MASTER => DifficultyOptions::MASTER,
@@ -392,9 +396,9 @@ pub enum JsEnemyType {
     PLAYER,
     CHAMPION,
 }
-impl Into<EnemyType> for JsEnemyType {
-    fn into(self) -> EnemyType {
-        match self {
+impl From<JsEnemyType> for EnemyType {
+    fn from(val: JsEnemyType) -> Self {
+        match val {
             JsEnemyType::MINOR => EnemyType::MINOR,
             JsEnemyType::ELITE => EnemyType::ELITE,
             JsEnemyType::MINIBOSS => EnemyType::MINIBOSS,

@@ -12,17 +12,11 @@ use crate::{
 
 use super::{FiringData, Weapon};
 
-fn get_data_pointers(_weapon_type_id: u8, _intrinsic_hash: u32) -> Result<DataPointers, String> {
+fn get_data_pointers(_weapon_type_id: u8, _intrinsic_hash: u32) -> Option<DataPointers> {
     let pointer_map: HashMap<WeaponPath, DataPointers> = HashMap::from(database::DATA_POINTERS);
-    let pointer_result = pointer_map.get(&WeaponPath(_weapon_type_id as u32, _intrinsic_hash));
-    if pointer_result.is_none() {
-        return Err(format!(
-            "No data pointers found for intrinsic hash: {}",
-            _intrinsic_hash
-        ));
-    }
-    let pointer = pointer_result.unwrap();
-    Ok(pointer.clone())
+    let pointer = pointer_map.get(&WeaponPath(_weapon_type_id as u32, _intrinsic_hash));
+
+    pointer.cloned()
 }
 
 impl Weapon {
@@ -32,30 +26,28 @@ impl Weapon {
         _intrinsic_hash: u32,
         _ammo_type_id: u32,
         _damage_type_id: u32,
-    ) -> Result<Weapon, String> {
+    ) -> Option<Weapon> {
         let data_pointer_result = get_data_pointers(_weapon_type_id, _intrinsic_hash);
-        if data_pointer_result.is_err() {
-            return Err(data_pointer_result.unwrap_err());
-        }
-        let data_pointer = data_pointer_result.unwrap();
 
-        let range_formula: RangeFormula = database::RANGE_DATA[data_pointer.r].clone();
+        let data_pointer = data_pointer_result?;
 
-        let handling_formula: HandlingFormula = database::HANDLING_DATA[data_pointer.h].clone();
+        let range_formula: RangeFormula = database::RANGE_DATA[data_pointer.r];
 
-        let reload_formula: ReloadFormula = database::RELOAD_DATA[data_pointer.rl].clone();
+        let handling_formula: HandlingFormula = database::HANDLING_DATA[data_pointer.h];
 
-        let damage_mods: DamageMods = database::SCALAR_DATA[data_pointer.s].clone();
+        let reload_formula: ReloadFormula = database::RELOAD_DATA[data_pointer.rl];
 
-        let firing_data: FiringData = database::FIRING_DATA[data_pointer.f].clone();
+        let damage_mods: DamageMods = database::SCALAR_DATA[data_pointer.s];
 
-        let ammo_formula: AmmoFormula = database::AMMO_DATA[data_pointer.a].clone();
+        let firing_data: FiringData = database::FIRING_DATA[data_pointer.f];
+
+        let ammo_formula: AmmoFormula = database::AMMO_DATA[data_pointer.a];
 
         let weapon_type = WeaponType::from(_weapon_type_id as u32);
         let ammo_type = AmmoType::from(_ammo_type_id);
         let damage_type = DamageType::from(_damage_type_id);
         let intrinsic_alias = enhanced_check(_intrinsic_hash).0;
-        Ok(Weapon {
+        Some(Weapon {
             intrinsic_hash: intrinsic_alias,
             hash: _hash,
             perks: HashMap::from([
